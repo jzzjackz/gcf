@@ -55,15 +55,18 @@ export default function AdminPanel() {
       const result = await res.json()
       console.log('Upload result:', result)
       
-      if (res.ok) {
-        alert(`Files uploaded successfully! ${result.files?.length || 0} files uploaded.`)
+      if (res.ok && result.files?.length > 0) {
+        alert(result.message || `Files uploaded successfully! ${result.files.length} files uploaded.`)
         setFiles([])
         setSelectedYear(null)
         // Reset file input
         const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
         if (fileInput) fileInput.value = ''
       } else {
-        alert(`Upload failed: ${result.error || 'Unknown error'}`)
+        const errorMsg = result.errors ? 
+          `Upload issues:\n${result.errors.map((e: any) => `${e.file}: ${e.error}`).join('\n')}` :
+          result.error || 'Upload failed - check console for details'
+        alert(errorMsg)
       }
     } catch (error) {
       console.error('Upload error:', error)
