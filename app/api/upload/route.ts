@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,21 +11,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing year or files' }, { status: 400 })
     }
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', year)
-    
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true })
-    }
+    const uploadedFiles = []
 
     for (const file of files) {
-      const bytes = await file.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      const filePath = path.join(uploadsDir, file.name)
-      fs.writeFileSync(filePath, buffer)
+      const fileName = `${year}/${Date.now()}-${file.name}`
+      const { data, error } = await supabase.storage
+        .from('archive-files')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) {
+        console.error('Upload error:', error)
+        continue
+      }
+
+      uploadedFiles.push(data.path)
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, files: uploadedFiles })
   } catch (error) {
+    console.error('Upload failed:', error)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }
