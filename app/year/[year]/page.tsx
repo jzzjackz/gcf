@@ -12,11 +12,26 @@ interface FileItem {
 
 export default function YearPage({ params }: { params: { year: string } }) {
   const [files, setFiles] = useState<FileItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadFiles = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/files/${params.year}`, {
+        cache: 'no-store'
+      })
+      const data = await res.json()
+      console.log('Loaded files:', data)
+      setFiles(data.files || [])
+    } catch (error) {
+      console.error('Error loading files:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    fetch(`/api/files/${params.year}`)
-      .then(res => res.json())
-      .then(data => setFiles(data.files || []))
+    loadFiles()
   }, [params.year])
 
   const copyImageUrl = (url: string) => {
@@ -31,9 +46,16 @@ export default function YearPage({ params }: { params: { year: string } }) {
       <div className="header">
         <h1>📂 {params.year}</h1>
         <p>{files.length} file(s)</p>
+        <button onClick={loadFiles} className="btn btn-secondary" style={{ marginTop: '10px' }}>
+          Refresh
+        </button>
       </div>
 
-      {files.length === 0 ? (
+      {loading ? (
+        <div className="empty-state">
+          <p>Loading files...</p>
+        </div>
+      ) : files.length === 0 ? (
         <div className="empty-state">
           <p>No files uploaded yet for this year</p>
         </div>
